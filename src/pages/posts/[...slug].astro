@@ -14,11 +14,12 @@ import { ReadingTime, WordCount } from "@components/features/posts/atoms";
 import License from "@components/misc/License.astro";
 import Markdown from "@components/misc/Markdown.astro";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getRelatedPosts, getSortedPosts } from "@utils/content-utils";
+import { getPostBySlug, getRelatedPosts, getSortedPosts, isApiDataSource } from "@utils/content-utils";
 import { hasCustomPermalink, initPostIdMap } from "@utils/permalink-utils";
 import { getFileDirFromPath, removeFileExtension } from "@utils/url-utils";
 import type { CollectionEntry } from "astro:content";
 import { render } from "astro:content";
+import type { ApiPostEntry } from "../../../adapters/api-adapter";
 import {
 	licenseConfig,
 	permalinkConfig,
@@ -33,6 +34,18 @@ import { profileConfig, siteConfig } from "../../config";
 import { formatDateToYYYYMMDD } from "../../utils/date-utils";
 
 export async function getStaticPaths() {
+	if (isApiDataSource()) {
+		// API 模式：从后端获取文章列表生成路径
+		const blogEntries = await getSortedPosts();
+		initPostIdMap(blogEntries);
+
+		return (blogEntries as ApiPostEntry[]).map((entry) => ({
+			params: { slug: entry.slug },
+			props: { entry },
+		}));
+	}
+
+	// 本地模式：原有逻辑不变
 	const blogEntries = await getSortedPosts();
 
 	// 初始化文章 ID 映射（用于 %post_id% 占位符）
@@ -96,8 +109,28 @@ export async function getStaticPaths() {
 }
 
 const { entry } = Astro.props;
-const { Content, headings } = await render(entry);
-const { remarkPluginFrontmatter } = await render(entry);
+
+// 根据数据源模式选择渲染方式
+let Content: any = null;
+let headings: { depth: number; slug: string; text: string }[] = [];
+let remarkPluginFrontmatter: { words?: number; minutes?: number } = {};
+
+if (isApiDataSource()) {
+	// API 模式：使用预渲染的 HTML 和提取的标题
+	const apiEntry = entry as ApiPostEntry;
+	headings = apiEntry.headings || [];
+	const textContent = (apiEntry.body || "").replace(/[#*`\-\[\]()!>]/g, "").trim();
+	const chineseChars = (textContent.match(/[\u4e00-\u9fff]/g) || []).length;
+	const englishWords = textContent.replace(/[\u4e00-\u9fff]/g, "").split(/\s+/).filter(Boolean).length;
+	remarkPluginFrontmatter.words = chineseChars + englishWords;
+	remarkPluginFrontmatter.minutes = Math.max(1, Math.ceil(remarkPluginFrontmatter.words / 400));
+} else {
+	// 本地模式：使用 Astro 原生 render()
+	const rendered = await render(entry as CollectionEntry<"posts">);
+	Content = rendered.Content;
+	headings = rendered.headings;
+	remarkPluginFrontmatter = rendered.remarkPluginFrontmatter;
+}
 
 // 获取相关文章
 const relatedPosts = relatedPostsConfig.enable
@@ -293,10 +326,16 @@ const jsonLd = {
 						password={entry.data.password}
 						hint={entry.data.passwordHint}
 					>
-						<Markdown class="mb-6 markdown-content onload-animation">
-							<Content />
-						</Markdown>
+						{isApiDataSource() ? (
+							<Markdown class="mb-6 markdown-content onload-animation" set:html={(entry as ApiPostEntry).renderedHtml || ""} />
+						) : (
+							<Markdown class="mb-6 markdown-content onload-animation">
+								<Content />
+							</Markdown>
+						)}
 					</Encryptor>
+				) : isApiDataSource() ? (
+					<Markdown class="mb-6 markdown-content onload-animation" set:html={(entry as ApiPostEntry).renderedHtml || ""} />
 				) : (
 					<Markdown class="mb-6 markdown-content onload-animation">
 						<Content />

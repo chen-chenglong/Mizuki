@@ -7,6 +7,8 @@ import satori from "satori";
 import sharp from "sharp";
 
 import { removeFileExtension } from "@/utils/url-utils";
+import { getSortedPosts, isApiDataSource } from "@/utils/content-utils";
+import type { ApiPostEntry } from "../../adapters/api-adapter";
 
 import { profileConfig, siteConfig } from "../../config";
 
@@ -26,12 +28,19 @@ export const getStaticPaths: GetStaticPaths = async () => {
 		return [];
 	}
 
-	const allPosts = await getCollection("posts");
-	const publishedPosts = allPosts.filter((post) => !post.data.draft);
+	let publishedPosts: (CollectionEntry<"posts"> | ApiPostEntry)[];
+
+	if (isApiDataSource()) {
+		publishedPosts = await getSortedPosts();
+	} else {
+		const allPosts = await getCollection("posts");
+		publishedPosts = allPosts.filter((post) => !post.data.draft);
+	}
 
 	return publishedPosts.map((post) => {
-		// 将 id 转换为 slug（移除扩展名）以匹配路由参数
-		const slug = removeFileExtension(post.id);
+		const slug = isApiDataSource()
+			? (post as ApiPostEntry).slug
+			: removeFileExtension(post.id);
 		return {
 			params: { slug },
 			props: { post },
@@ -105,7 +114,7 @@ async function fetchNotoSansSCFonts() {
 
 export async function GET({
 	props,
-}: APIContext<{ post: CollectionEntry<"posts"> }>) {
+}: APIContext<{ post: CollectionEntry<"posts"> | ApiPostEntry }>) {
 	const { post } = props;
 
 	// Try to fetch fonts from Google Fonts (woff2) at runtime.

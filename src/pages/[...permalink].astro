@@ -19,7 +19,7 @@ import Markdown from "@components/misc/Markdown.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getSortedPosts } from "@utils/content-utils";
+import { getSortedPosts, isApiDataSource } from "@utils/content-utils";
 import {
 	generatePermalinkSlug,
 	hasCustomPermalink,
@@ -28,6 +28,7 @@ import {
 import { getFileDirFromPath } from "@utils/url-utils";
 import type { CollectionEntry } from "astro:content";
 import { render } from "astro:content";
+import type { ApiPostEntry } from "../../adapters/api-adapter";
 import { Icon } from "astro-icon/components";
 import CryptoJS from "crypto-js";
 import { licenseConfig } from "src/config";
@@ -75,9 +76,26 @@ export async function getStaticPaths() {
 }
 
 const { entry } = Astro.props;
-const { Content, headings } = await render(entry);
 
-const { remarkPluginFrontmatter } = await render(entry);
+// 根据数据源模式选择渲染方式
+let Content: any = null;
+let headings: { depth: number; slug: string; text: string }[] = [];
+let remarkPluginFrontmatter: { words?: number; minutes?: number } = {};
+
+if (isApiDataSource()) {
+	const apiEntry = entry as ApiPostEntry;
+	headings = apiEntry.headings || [];
+	const textContent = (apiEntry.body || "").replace(/[#*`\-\[\]()!>]/g, "").trim();
+	const chineseChars = (textContent.match(/[\u4e00-\u9fff]/g) || []).length;
+	const englishWords = textContent.replace(/[\u4e00-\u9fff]/g, "").split(/\s+/).filter(Boolean).length;
+	remarkPluginFrontmatter.words = chineseChars + englishWords;
+	remarkPluginFrontmatter.minutes = Math.max(1, Math.ceil(remarkPluginFrontmatter.words / 400));
+} else {
+	const rendered = await render(entry as CollectionEntry<"posts">);
+	Content = rendered.Content;
+	headings = rendered.headings;
+	remarkPluginFrontmatter = rendered.remarkPluginFrontmatter;
+}
 
 // 处理加密逻辑
 let encryptedContent = "";
@@ -233,9 +251,13 @@ const jsonLd = {
 					/>
 				) : (
 					<>
-						<Markdown class="mb-6 markdown-content onload-animation">
-							<Content />
-						</Markdown>
+						{isApiDataSource() ? (
+							<Markdown class="mb-6 markdown-content onload-animation" set:html={(entry as ApiPostEntry).renderedHtml || ""} />
+						) : (
+							<Markdown class="mb-6 markdown-content onload-animation">
+								<Content />
+							</Markdown>
+						)}
 						{licenseConfig.enable && (
 							<License
 								title={entry.data.title}

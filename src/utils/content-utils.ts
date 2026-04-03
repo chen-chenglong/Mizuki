@@ -1,11 +1,23 @@
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
+import {
+	getApiCategoriesWithCount,
+	getApiPosts,
+	getApiPostBySlug,
+	getApiTagsWithCount,
+	isApiDataSource,
+	type ApiPostEntry,
+} from "../adapters/api-adapter";
 import { initPostIdMap } from "@utils/permalink-utils";
 import { getCategoryUrl, getPostUrl } from "@utils/url-utils";
 import { type CollectionEntry, getCollection } from "astro:content";
 
 // // Retrieve posts and sort them by publication date
 async function getRawSortedPosts() {
+	if (isApiDataSource()) {
+		return await getApiPosts();
+	}
+
 	const allBlogPosts = await getCollection("posts", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
@@ -42,7 +54,11 @@ async function getRawSortedPosts() {
 	return sorted;
 }
 
-export async function getSortedPosts() {
+/**
+ * 获取排序后的文章列表（含前后导航信息）
+ * 兼容本地模式和 API 模式
+ */
+export async function getSortedPosts(): Promise<(CollectionEntry<"posts"> | ApiPostEntry)[]> {
 	const sorted = await getRawSortedPosts();
 
 	for (let i = 1; i < sorted.length; i++) {
@@ -65,13 +81,13 @@ export async function getSortedPostsList(): Promise<PostForList[]> {
 	const sortedFullPosts = await getRawSortedPosts();
 
 	// 初始化文章 ID 映射（用于 permalink 功能）
-	initPostIdMap(sortedFullPosts);
+	initPostIdMap(sortedFullPosts as any);
 
 	// delete post.body，并预计算 URL
 	const sortedPostsList = sortedFullPosts.map((post) => ({
 		id: post.id,
 		data: post.data,
-		url: getPostUrl(post),
+		url: getPostUrl(post as any),
 	}));
 
 	return sortedPostsList;
@@ -82,6 +98,10 @@ export interface Tag {
 }
 
 export async function getTagList(): Promise<Tag[]> {
+	if (isApiDataSource()) {
+		return await getApiTagsWithCount();
+	}
+
 	const allBlogPosts = await getCollection<"posts">("posts", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
@@ -103,7 +123,6 @@ export async function getTagList(): Promise<Tag[]> {
 
 	return keys.map((key) => ({ name: key, count: countMap[key] }));
 }
-
 export interface Category {
 	name: string;
 	count: number;
@@ -111,6 +130,10 @@ export interface Category {
 }
 
 export async function getCategoryList(): Promise<Category[]> {
+	if (isApiDataSource()) {
+		return await getApiCategoriesWithCount();
+	}
+
 	const allBlogPosts = await getCollection<"posts">("posts", ({ data }) => {
 		return import.meta.env.PROD ? data.draft !== true : true;
 	});
@@ -214,12 +237,18 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
  * - categoryBonus (0 or 10): 同分类加 10 分
  */
 export async function getRelatedPosts(
-	currentPost: CollectionEntry<"posts">,
+	currentPost: CollectionEntry<"posts"> | ApiPostEntry,
 	maxCount = 5,
 ): Promise<PostForList[]> {
-	const allPosts = await getCollection<"posts">("posts", ({ data }) => {
-		return import.meta.env.PROD ? data.draft !== true : true;
-	});
+	let allPosts: (CollectionEntry<"posts"> | ApiPostEntry)[];
+
+	if (isApiDataSource()) {
+		allPosts = await getApiPosts();
+	} else {
+		allPosts = await getCollection<"posts">("posts", ({ data }) => {
+			return import.meta.env.PROD ? data.draft !== true : true;
+		});
+	}
 
 	// 排除自身和加密文章
 	const candidates = allPosts.filter(
@@ -281,9 +310,7 @@ export async function getRelatedPosts(
 	const result: PostForList[] = [];
 
 	for (const s of withTagMatch) {
-		if (result.length >= maxCount) {
-			break;
-		}
+		if (result.length >= maxCount) break;
 		result.push({ id: s.post.id, data: s.post.data });
 	}
 
@@ -296,12 +323,21 @@ export async function getRelatedPosts(
 				(a.timeFreshnessScore + a.categoryBonus),
 		);
 		for (const s of withoutTagMatch) {
-			if (result.length >= maxCount) {
-				break;
-			}
+			if (result.length >= maxCount) break;
 			result.push({ id: s.post.id, data: s.post.data });
 		}
 	}
 
 	return result;
 }
+
+/**
+ * API 模式下根据 slug 获取单篇文章（供详情页使用）
+ */
+export async function getPostBySlug(slug: string): Promise<ApiPostEntry | null> {
+	if (!isApiDataSource()) return null;
+	return await getApiPostBySlug(slug);
+}
+
+/** Re-export for convenience: check if running in API data source mode */
+export { isApiDataSource } from "../adapters/api-adapter";
