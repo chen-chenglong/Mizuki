@@ -28,13 +28,13 @@ import {
 import { getFileDirFromPath } from "@utils/url-utils";
 import type { CollectionEntry } from "astro:content";
 import { render } from "astro:content";
-import type { ApiPostEntry } from "../../adapters/api-adapter";
 import { Icon } from "astro-icon/components";
 import CryptoJS from "crypto-js";
 import { licenseConfig } from "src/config";
 
 import { permalinkConfig } from "@/config";
 
+import type { ApiPostEntry } from "../adapters/api-adapter";
 import { profileConfig, siteConfig } from "../config";
 import { formatDateToYYYYMMDD } from "../utils/date-utils";
 
@@ -89,7 +89,7 @@ if (isApiDataSource()) {
 	const chineseChars = (textContent.match(/[\u4e00-\u9fff]/g) || []).length;
 	const englishWords = textContent.replace(/[\u4e00-\u9fff]/g, "").split(/\s+/).filter(Boolean).length;
 	remarkPluginFrontmatter.words = chineseChars + englishWords;
-	remarkPluginFrontmatter.minutes = Math.max(1, Math.ceil(remarkPluginFrontmatter.words / 400));
+	remarkPluginFrontmatter.minutes = Math.max(1, Math.ceil((chineseChars + englishWords) / 400));
 } else {
 	const rendered = await render(entry as CollectionEntry<"posts">);
 	Content = rendered.Content;

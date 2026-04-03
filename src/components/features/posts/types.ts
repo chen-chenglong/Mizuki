@@ -1,5 +1,6 @@
 import type { Page } from "astro";
 import type { CollectionEntry } from "astro:content";
+
 import type { ApiPostEntry } from "../../../adapters/api-adapter";
 
 /** 文章条目：支持本地 content collection 或 API 数据源 */

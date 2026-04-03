@@ -14,12 +14,11 @@ import { ReadingTime, WordCount } from "@components/features/posts/atoms";
 import License from "@components/misc/License.astro";
 import Markdown from "@components/misc/Markdown.astro";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getPostBySlug, getRelatedPosts, getSortedPosts, isApiDataSource } from "@utils/content-utils";
+import { getRelatedPosts, getSortedPosts, isApiDataSource } from "@utils/content-utils";
 import { hasCustomPermalink, initPostIdMap } from "@utils/permalink-utils";
 import { getFileDirFromPath, removeFileExtension } from "@utils/url-utils";
 import type { CollectionEntry } from "astro:content";
 import { render } from "astro:content";
-import type { ApiPostEntry } from "../../../adapters/api-adapter";
 import {
 	licenseConfig,
 	permalinkConfig,
@@ -28,6 +27,7 @@ import {
 	shareConfig,
 } from "src/config";
 
+import type { ApiPostEntry } from "../../adapters/api-adapter";
 import Image from "../../components/atoms/Image/Image.astro";
 import Encryptor from "../../components/features/auth/Encryptor.astro";
 import { profileConfig, siteConfig } from "../../config";
@@ -123,7 +123,7 @@ if (isApiDataSource()) {
 	const chineseChars = (textContent.match(/[\u4e00-\u9fff]/g) || []).length;
 	const englishWords = textContent.replace(/[\u4e00-\u9fff]/g, "").split(/\s+/).filter(Boolean).length;
 	remarkPluginFrontmatter.words = chineseChars + englishWords;
-	remarkPluginFrontmatter.minutes = Math.max(1, Math.ceil(remarkPluginFrontmatter.words / 400));
+	remarkPluginFrontmatter.minutes = Math.max(1, Math.ceil((chineseChars + englishWords) / 400));
 } else {
 	// 本地模式：使用 Astro 原生 render()
 	const rendered = await render(entry as CollectionEntry<"posts">);
@@ -254,13 +254,13 @@ const jsonLd = {
 			>
 				<div class="flex flex-row items-center">
 					<WordCount
-						words={remarkPluginFrontmatter.words}
+						words={remarkPluginFrontmatter.words ?? 0}
 						variant="card"
 					/>
 				</div>
 				<div class="flex flex-row items-center">
 					<ReadingTime
-						minutes={remarkPluginFrontmatter.minutes}
+						minutes={remarkPluginFrontmatter.minutes ?? 1}
 						variant="card"
 					/>
 				</div>

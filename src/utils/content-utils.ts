@@ -1,16 +1,18 @@
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
-import {
-	getApiCategoriesWithCount,
-	getApiPosts,
-	getApiPostBySlug,
-	getApiTagsWithCount,
-	isApiDataSource,
-	type ApiPostEntry,
-} from "../adapters/api-adapter";
 import { initPostIdMap } from "@utils/permalink-utils";
 import { getCategoryUrl, getPostUrl } from "@utils/url-utils";
 import { type CollectionEntry, getCollection } from "astro:content";
+
+import {
+	type ApiPostData,
+	type ApiPostEntry,
+	getApiCategoriesWithCount,
+	getApiPostBySlug,
+	getApiPosts,
+	getApiTagsWithCount,
+	isApiDataSource,
+} from "../adapters/api-adapter";
 
 // // Retrieve posts and sort them by publication date
 async function getRawSortedPosts() {
@@ -74,17 +76,17 @@ export async function getSortedPosts(): Promise<(CollectionEntry<"posts"> | ApiP
 }
 export interface PostForList {
 	id: string;
-	data: CollectionEntry<"posts">["data"];
+	data: CollectionEntry<"posts">["data"] | ApiPostData;
 	url?: string; // 预计算的文章 URL
 }
 export async function getSortedPostsList(): Promise<PostForList[]> {
 	const sortedFullPosts = await getRawSortedPosts();
 
 	// 初始化文章 ID 映射（用于 permalink 功能）
-	initPostIdMap(sortedFullPosts as any);
+	initPostIdMap(sortedFullPosts as (CollectionEntry<"posts"> | ApiPostEntry)[]);
 
 	// delete post.body，并预计算 URL
-	const sortedPostsList = sortedFullPosts.map((post) => ({
+	const sortedPostsList = sortedFullPosts.map((post: CollectionEntry<"posts"> | ApiPostEntry) => ({
 		id: post.id,
 		data: post.data,
 		url: getPostUrl(post as any),
@@ -310,8 +312,8 @@ export async function getRelatedPosts(
 	const result: PostForList[] = [];
 
 	for (const s of withTagMatch) {
-		if (result.length >= maxCount) break;
-		result.push({ id: s.post.id, data: s.post.data });
+		if (result.length >= maxCount) {break;}
+		result.push({ id: s.post.id, data: s.post.data as CollectionEntry<"posts">["data"] | ApiPostData });
 	}
 
 	// 不足时从剩余候选中按 timeFreshnessScore + categoryBonus 降序补充
@@ -323,8 +325,8 @@ export async function getRelatedPosts(
 				(a.timeFreshnessScore + a.categoryBonus),
 		);
 		for (const s of withoutTagMatch) {
-			if (result.length >= maxCount) break;
-			result.push({ id: s.post.id, data: s.post.data });
+			if (result.length >= maxCount) {break;}
+			result.push({ id: s.post.id, data: s.post.data as CollectionEntry<"posts">["data"] | ApiPostData });
 		}
 	}
 
@@ -335,7 +337,7 @@ export async function getRelatedPosts(
  * API 模式下根据 slug 获取单篇文章（供详情页使用）
  */
 export async function getPostBySlug(slug: string): Promise<ApiPostEntry | null> {
-	if (!isApiDataSource()) return null;
+	if (!isApiDataSource()) {return null;}
 	return await getApiPostBySlug(slug);
 }
 

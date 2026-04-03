@@ -6,10 +6,10 @@ import { getCollection } from "astro:content";
 import satori from "satori";
 import sharp from "sharp";
 
-import { removeFileExtension } from "@/utils/url-utils";
 import { getSortedPosts, isApiDataSource } from "@/utils/content-utils";
-import type { ApiPostEntry } from "../../adapters/api-adapter";
+import { removeFileExtension } from "@/utils/url-utils";
 
+import type { ApiPostEntry } from "../../adapters/api-adapter";
 import { profileConfig, siteConfig } from "../../config";
 
 type Weight = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900;

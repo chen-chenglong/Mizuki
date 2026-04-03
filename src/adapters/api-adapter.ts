@@ -60,6 +60,8 @@ export interface ApiPostEntry {
 	renderedHtml?: string;
 	/** 标题列表（从 markdown 提取） */
 	headings?: { depth: number; slug: string; text: string }[];
+	/** 兼容 CollectionEntry 的 filePath (API 模式下为空) */
+	filePath?: string;
 }
 
 /**
@@ -87,11 +89,11 @@ export interface ApiPostData {
 	passwordHint: string;
 	alias?: string;
 	permalink?: string;
-	// 前后导航（由 content-utils 填充）
-	prevTitle?: string;
-	prevSlug?: string;
-	nextTitle?: string;
-	nextSlug?: string;
+	// 前后导航（由 content-utils 填充，与 CollectionEntry data 类型对齐）
+	prevTitle: string;
+	prevSlug: string;
+	nextTitle: string;
+	nextSlug: string;
 }
 
 /**
@@ -147,6 +149,11 @@ export function apiPostToEntry(post: ApiPost): ApiPostEntry {
 			passwordHint: post.passwordHint || "",
 			alias: post.alias || undefined,
 			permalink: post.permalink || undefined,
+			// 前后导航默认空值（由 content-utils 填充）
+			prevTitle: "",
+			prevSlug: "",
+			nextTitle: "",
+			nextSlug: "",
 		},
 		// 预计算渲染结果
 		renderedHtml: md.render(post.content),
@@ -163,11 +170,11 @@ export function apiPostToEntry(post: ApiPost): ApiPostEntry {
  * 3. 其余按发布日期降序
  */
 export async function getApiPosts(): Promise<ApiPostEntry[]> {
-	if (DATA_SOURCE !== "api") return [];
+	if (DATA_SOURCE !== "api") {return [];}
 
 	try {
 		const response = await fetch(`${API_BASE}/api/posts?pageSize=1000`);
-		if (!response.ok) throw new Error(`API error: ${response.status}`);
+		if (!response.ok) {throw new Error(`API error: ${response.status}`);}
 		const result = await response.json();
 
 		if (result.success === false) {
@@ -181,15 +188,15 @@ export async function getApiPosts(): Promise<ApiPostEntry[]> {
 
 		// 应用与本地模式相同的排序逻辑
 		entries.sort((a, b) => {
-			if (a.data.pinned && !b.data.pinned) return -1;
-			if (!a.data.pinned && b.data.pinned) return 1;
+			if (a.data.pinned && !b.data.pinned) {return -1;}
+			if (!a.data.pinned && b.data.pinned) {return 1;}
 
 			if (a.data.pinned && b.data.pinned) {
 				const pa = a.data.priority;
 				const pb = b.data.priority;
-				if (pa !== undefined && pb !== undefined && pa !== pb) return pa - pb;
-				if (pa !== undefined) return -1;
-				if (pb !== undefined) return 1;
+				if (pa !== undefined && pb !== undefined && pa !== pb) {return pa - pb;}
+				if (pa !== undefined) {return -1;}
+				if (pb !== undefined) {return 1;}
 			}
 
 			return b.data.published.getTime() - a.data.published.getTime();
@@ -206,12 +213,12 @@ export async function getApiPosts(): Promise<ApiPostEntry[]> {
  * 根据 slug 获取单篇文章详情
  */
 export async function getApiPostBySlug(slug: string): Promise<ApiPostEntry | null> {
-	if (DATA_SOURCE !== "api") return null;
+	if (DATA_SOURCE !== "api") {return null;}
 
 	try {
 		const response = await fetch(`${API_BASE}/api/posts/${encodeURIComponent(slug)}`);
 		if (!response.ok) {
-			if (response.status === 404) return null;
+			if (response.status === 404) {return null;}
 			throw new Error(`API error: ${response.status}`);
 		}
 		const result = await response.json();
@@ -232,7 +239,7 @@ export async function getApiPostBySlug(slug: string): Promise<ApiPostEntry | nul
  * 获取所有分类列表
  */
 export async function getApiCategories(): Promise<string[]> {
-	if (DATA_SOURCE !== "api") return [];
+	if (DATA_SOURCE !== "api") {return [];}
 
 	try {
 		const response = await fetch(`${API_BASE}/api/posts/categories`);
@@ -247,7 +254,7 @@ export async function getApiCategories(): Promise<string[]> {
  * 获取所有标签列表及计数
  */
 export async function getApiTagsWithCount(): Promise<{ name: string; count: number }[]> {
-	if (DATA_SOURCE !== "api") return [];
+	if (DATA_SOURCE !== "api") {return [];}
 
 	try {
 		// 通过文章列表聚合标签计数（API 端点只返回标签名列表）
@@ -272,7 +279,7 @@ export async function getApiTagsWithCount(): Promise<{ name: string; count: numb
 export async function getApiCategoriesWithCount(): Promise<
 	{ name: string; count: number; url: string }[]
 > {
-	if (DATA_SOURCE !== "api") return [];
+	if (DATA_SOURCE !== "api") {return [];}
 
 	try {
 		const posts = await getApiPosts();
