@@ -12,7 +12,8 @@
 import MarkdownIt from "markdown-it";
 
 const DATA_SOURCE = (import.meta.env.DATA_SOURCE as string) || "local";
-const API_BASE = (import.meta.env.API_BASE as string) || "http://localhost:3000";
+const API_BASE =
+	(import.meta.env.API_BASE as string) || "http://localhost:3000";
 
 // 共享的 markdown-it 实例（与 RSS/Atom feed 使用相同的配置）
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true });
@@ -99,7 +100,9 @@ export interface ApiPostData {
 /**
  * 从 markdown 内容中提取标题（模拟 Astro render() 的 headings 输出）
  */
-function extractHeadings(markdown: string): { depth: number; slug: string; text: string }[] {
+function extractHeadings(
+	markdown: string,
+): { depth: number; slug: string; text: string }[] {
 	const headings: { depth: number; slug: string; text: string }[] = [];
 	const headingRegex = /^(#{1,6})\s+(.+)$/gm;
 	let match: RegExpExecArray | null;
@@ -170,11 +173,15 @@ export function apiPostToEntry(post: ApiPost): ApiPostEntry {
  * 3. 其余按发布日期降序
  */
 export async function getApiPosts(): Promise<ApiPostEntry[]> {
-	if (DATA_SOURCE !== "api") {return [];}
+	if (DATA_SOURCE !== "api") {
+		return [];
+	}
 
 	try {
 		const response = await fetch(`${API_BASE}/api/posts?pageSize=1000`);
-		if (!response.ok) {throw new Error(`API error: ${response.status}`);}
+		if (!response.ok) {
+			throw new Error(`API error: ${response.status}`);
+		}
 		const result = await response.json();
 
 		if (result.success === false) {
@@ -188,15 +195,25 @@ export async function getApiPosts(): Promise<ApiPostEntry[]> {
 
 		// 应用与本地模式相同的排序逻辑
 		entries.sort((a, b) => {
-			if (a.data.pinned && !b.data.pinned) {return -1;}
-			if (!a.data.pinned && b.data.pinned) {return 1;}
+			if (a.data.pinned && !b.data.pinned) {
+				return -1;
+			}
+			if (!a.data.pinned && b.data.pinned) {
+				return 1;
+			}
 
 			if (a.data.pinned && b.data.pinned) {
 				const pa = a.data.priority;
 				const pb = b.data.priority;
-				if (pa !== undefined && pb !== undefined && pa !== pb) {return pa - pb;}
-				if (pa !== undefined) {return -1;}
-				if (pb !== undefined) {return 1;}
+				if (pa !== undefined && pb !== undefined && pa !== pb) {
+					return pa - pb;
+				}
+				if (pa !== undefined) {
+					return -1;
+				}
+				if (pb !== undefined) {
+					return 1;
+				}
 			}
 
 			return b.data.published.getTime() - a.data.published.getTime();
@@ -212,13 +229,21 @@ export async function getApiPosts(): Promise<ApiPostEntry[]> {
 /**
  * 根据 slug 获取单篇文章详情
  */
-export async function getApiPostBySlug(slug: string): Promise<ApiPostEntry | null> {
-	if (DATA_SOURCE !== "api") {return null;}
+export async function getApiPostBySlug(
+	slug: string,
+): Promise<ApiPostEntry | null> {
+	if (DATA_SOURCE !== "api") {
+		return null;
+	}
 
 	try {
-		const response = await fetch(`${API_BASE}/api/posts/${encodeURIComponent(slug)}`);
+		const response = await fetch(
+			`${API_BASE}/api/posts/${encodeURIComponent(slug)}`,
+		);
 		if (!response.ok) {
-			if (response.status === 404) {return null;}
+			if (response.status === 404) {
+				return null;
+			}
 			throw new Error(`API error: ${response.status}`);
 		}
 		const result = await response.json();
@@ -239,7 +264,9 @@ export async function getApiPostBySlug(slug: string): Promise<ApiPostEntry | nul
  * 获取所有分类列表
  */
 export async function getApiCategories(): Promise<string[]> {
-	if (DATA_SOURCE !== "api") {return [];}
+	if (DATA_SOURCE !== "api") {
+		return [];
+	}
 
 	try {
 		const response = await fetch(`${API_BASE}/api/posts/categories`);
@@ -253,8 +280,12 @@ export async function getApiCategories(): Promise<string[]> {
 /**
  * 获取所有标签列表及计数
  */
-export async function getApiTagsWithCount(): Promise<{ name: string; count: number }[]> {
-	if (DATA_SOURCE !== "api") {return [];}
+export async function getApiTagsWithCount(): Promise<
+	{ name: string; count: number }[]
+> {
+	if (DATA_SOURCE !== "api") {
+		return [];
+	}
 
 	try {
 		// 通过文章列表聚合标签计数（API 端点只返回标签名列表）
@@ -267,7 +298,9 @@ export async function getApiTagsWithCount(): Promise<{ name: string; count: numb
 		});
 		return Object.entries(countMap)
 			.map(([name, count]) => ({ name, count }))
-			.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+			.sort((a, b) =>
+				a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
+			);
 	} catch {
 		return [];
 	}
@@ -279,7 +312,9 @@ export async function getApiTagsWithCount(): Promise<{ name: string; count: numb
 export async function getApiCategoriesWithCount(): Promise<
 	{ name: string; count: number; url: string }[]
 > {
-	if (DATA_SOURCE !== "api") {return [];}
+	if (DATA_SOURCE !== "api") {
+		return [];
+	}
 
 	try {
 		const posts = await getApiPosts();

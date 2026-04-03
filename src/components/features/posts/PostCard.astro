@@ -36,14 +36,24 @@ const coverWidth = "28%";
 let remarkPluginFrontmatter: { words?: number; excerpt?: string } = {};
 
 if (isApiDataSource()) {
-	const textContent = (entry.body || "").replace(/[#*`\-\[\]()!>]/g, "").trim();
+	const textContent = (entry.body || "")
+		.replace(/[#*`\-\[\]()!>]/g, "")
+		.trim();
 	const chineseChars = (textContent.match(/[\u4e00-\u9fff]/g) || []).length;
-	const englishWords = textContent.replace(/[\u4e00-\u9fff]/g, "").split(/\s+/).filter(Boolean).length;
+	const englishWords = textContent
+		.replace(/[\u4e00-\u9fff]/g, "")
+		.split(/\s+/)
+		.filter(Boolean).length;
 	remarkPluginFrontmatter.words = chineseChars + englishWords;
 	// 取前 120 字作为摘要
-	remarkPluginFrontmatter.excerpt = textContent.length > 120 ? textContent.slice(0, 120) + "..." : textContent || undefined;
+	remarkPluginFrontmatter.excerpt =
+		textContent.length > 120
+			? textContent.slice(0, 120) + "..."
+			: textContent || undefined;
 } else {
-	const rendered = await render(entry as import("astro:content").CollectionEntry<"posts">);
+	const rendered = await render(
+		entry as import("astro:content").CollectionEntry<"posts">,
+	);
 	remarkPluginFrontmatter = rendered.remarkPluginFrontmatter;
 }
 ---
@@ -168,7 +178,11 @@ if (isApiDataSource()) {
 				</div>
 				<Image
 					src={image}
-					basePath={isApiDataSource() ? "" : getFileDirFromPath(entry.filePath || "")}
+					basePath={
+						isApiDataSource()
+							? ""
+							: getFileDirFromPath(entry.filePath || "")
+					}
 					alt="Cover Image of the Post"
 					class="w-full h-full"
 					widths={[200, 400, 800]}

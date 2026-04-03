@@ -85,11 +85,19 @@ let remarkPluginFrontmatter: { words?: number; minutes?: number } = {};
 if (isApiDataSource()) {
 	const apiEntry = entry as ApiPostEntry;
 	headings = apiEntry.headings || [];
-	const textContent = (apiEntry.body || "").replace(/[#*`\-\[\]()!>]/g, "").trim();
+	const textContent = (apiEntry.body || "")
+		.replace(/[#*`\-\[\]()!>]/g, "")
+		.trim();
 	const chineseChars = (textContent.match(/[\u4e00-\u9fff]/g) || []).length;
-	const englishWords = textContent.replace(/[\u4e00-\u9fff]/g, "").split(/\s+/).filter(Boolean).length;
+	const englishWords = textContent
+		.replace(/[\u4e00-\u9fff]/g, "")
+		.split(/\s+/)
+		.filter(Boolean).length;
 	remarkPluginFrontmatter.words = chineseChars + englishWords;
-	remarkPluginFrontmatter.minutes = Math.max(1, Math.ceil((chineseChars + englishWords) / 400));
+	remarkPluginFrontmatter.minutes = Math.max(
+		1,
+		Math.ceil((chineseChars + englishWords) / 400),
+	);
 } else {
 	const rendered = await render(entry as CollectionEntry<"posts">);
 	Content = rendered.Content;
@@ -252,7 +260,12 @@ const jsonLd = {
 				) : (
 					<>
 						{isApiDataSource() ? (
-							<Markdown class="mb-6 markdown-content onload-animation" set:html={(entry as ApiPostEntry).renderedHtml || ""} />
+							<Markdown
+								class="mb-6 markdown-content onload-animation"
+								set:html={
+									(entry as ApiPostEntry).renderedHtml || ""
+								}
+							/>
 						) : (
 							<Markdown class="mb-6 markdown-content onload-animation">
 								<Content />

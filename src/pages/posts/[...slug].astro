@@ -14,7 +14,11 @@ import { ReadingTime, WordCount } from "@components/features/posts/atoms";
 import License from "@components/misc/License.astro";
 import Markdown from "@components/misc/Markdown.astro";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getRelatedPosts, getSortedPosts, isApiDataSource } from "@utils/content-utils";
+import {
+	getRelatedPosts,
+	getSortedPosts,
+	isApiDataSource,
+} from "@utils/content-utils";
 import { hasCustomPermalink, initPostIdMap } from "@utils/permalink-utils";
 import { getFileDirFromPath, removeFileExtension } from "@utils/url-utils";
 import type { CollectionEntry } from "astro:content";
@@ -119,11 +123,19 @@ if (isApiDataSource()) {
 	// API 模式：使用预渲染的 HTML 和提取的标题
 	const apiEntry = entry as ApiPostEntry;
 	headings = apiEntry.headings || [];
-	const textContent = (apiEntry.body || "").replace(/[#*`\-\[\]()!>]/g, "").trim();
+	const textContent = (apiEntry.body || "")
+		.replace(/[#*`\-\[\]()!>]/g, "")
+		.trim();
 	const chineseChars = (textContent.match(/[\u4e00-\u9fff]/g) || []).length;
-	const englishWords = textContent.replace(/[\u4e00-\u9fff]/g, "").split(/\s+/).filter(Boolean).length;
+	const englishWords = textContent
+		.replace(/[\u4e00-\u9fff]/g, "")
+		.split(/\s+/)
+		.filter(Boolean).length;
 	remarkPluginFrontmatter.words = chineseChars + englishWords;
-	remarkPluginFrontmatter.minutes = Math.max(1, Math.ceil((chineseChars + englishWords) / 400));
+	remarkPluginFrontmatter.minutes = Math.max(
+		1,
+		Math.ceil((chineseChars + englishWords) / 400),
+	);
 } else {
 	// 本地模式：使用 Astro 原生 render()
 	const rendered = await render(entry as CollectionEntry<"posts">);
@@ -327,7 +339,12 @@ const jsonLd = {
 						hint={entry.data.passwordHint}
 					>
 						{isApiDataSource() ? (
-							<Markdown class="mb-6 markdown-content onload-animation" set:html={(entry as ApiPostEntry).renderedHtml || ""} />
+							<Markdown
+								class="mb-6 markdown-content onload-animation"
+								set:html={
+									(entry as ApiPostEntry).renderedHtml || ""
+								}
+							/>
 						) : (
 							<Markdown class="mb-6 markdown-content onload-animation">
 								<Content />
@@ -335,7 +352,10 @@ const jsonLd = {
 						)}
 					</Encryptor>
 				) : isApiDataSource() ? (
-					<Markdown class="mb-6 markdown-content onload-animation" set:html={(entry as ApiPostEntry).renderedHtml || ""} />
+					<Markdown
+						class="mb-6 markdown-content onload-animation"
+						set:html={(entry as ApiPostEntry).renderedHtml || ""}
+					/>
 				) : (
 					<Markdown class="mb-6 markdown-content onload-animation">
 						<Content />
